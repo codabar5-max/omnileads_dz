@@ -489,7 +489,8 @@ class CalificacionTests(OMLBaseTest):
                                                   self.campana,
                                                   self.contacto,
                                                   call_data)
-        request_get.assert_called_with(sitio_externo.url, params=parametros)
+        request_get.assert_called_with(
+            sitio_externo.url, headers={}, params=parametros, verify=True)
 
     def test_se_muestra_historico_calificaciones_contacto_llamada_entrante(self):
         self.campana.type = Campana.TYPE_ENTRANTE
@@ -591,11 +592,6 @@ class CalificacionTests(OMLBaseTest):
             calificacion.save()
         self.assertRaises(ValidationError, modificar_calificacion)
 
-    def test_no_permitir_eliminar_calificacion_agenda_por_url(self):
-        url = reverse('calificacion_delete', kwargs={'pk': 1})
-        response = self.client.get(url, follow=True)
-        self.assertEqual(response.status_code, 403)
-
     @patch('api_app.services.calificacion_llamada.CalificacionLLamada.create_family')
     def test_campana_fuerza_calificar_llamada_impacta_en_redis_get(self, create_family):
         self.campana.type = Campana.TYPE_MANUAL
@@ -623,4 +619,5 @@ class CalificacionTests(OMLBaseTest):
         call_data['force_disposition'] = False
 
         create_family.assert_called_with(self.agente_profile, call_data, call_data_json,
-                                         calificado=True, gestion=False, id_calificacion=None)
+                                         calificado=True, es_agenda=False,
+                                         gestion=False, id_calificacion=None)

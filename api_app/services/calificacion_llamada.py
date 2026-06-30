@@ -22,6 +22,7 @@ from __future__ import unicode_literals
 from django.conf import settings
 
 from notification_app.notification import AgentNotifier
+from notification_app.notification import RedisStreamNotifier
 
 import logging as _logging
 import redis
@@ -44,11 +45,14 @@ class CalificacionLLamada(object):
     def get_nombre_family(self):
         return "OML:CALIFICACION:LLAMADA"
 
-    def create_family(self, agente, call_data, json_calldata, calificado, gestion, id_calificacion):
+    def create_family(self, agente, call_data, json_calldata, calificado, gestion, id_calificacion,
+                      es_agenda=None):
         redis_connection = self.get_redis_connection()
         family = self._get_nombre_family(agente)
         if calificado is True:
             llamada_calificada = 'TRUE'
+            redis_stream_notifier = RedisStreamNotifier()
+            redis_stream_notifier.send('calification', agente.id)
         else:
             llamada_calificada = 'FALSE'
         if gestion is True:
@@ -72,7 +76,7 @@ class CalificacionLLamada(object):
             'IDCALIFICACION': id_calificacion,
         }
 
-        if agente.forzar_despausa():
+        if agente.forzar_despausa() and not es_agenda:
             notification = AgentNotifier()
             message = {
                 "id": call_data['call_id'],

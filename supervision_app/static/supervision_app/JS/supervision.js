@@ -29,16 +29,13 @@ $(function() {
     createDataTable();
     subcribeFilterChange();
 
-    const contactadosSocket = new WebSocket(
-        'wss://' +
-        window.location.host +
-        '/consumers/stream/supervisor/' +
-        $('input#supervisor_id').val() +
-        '/' +
-        'agentes'
-    );
-
-    contactadosSocket.onmessage = function(e) {
+    const url = `wss://${window.location.host}/consumers/stream/supervisor/${$('input#supervisor_id').val()}/agentes`;
+    const rws = new ReconnectingWebSocket(url, [], {
+        connectionTimeout: 10000,
+        maxReconnectionDelay: 3000,
+        minReconnectionDelay: 1000,
+    });
+    rws.addEventListener('message', function(e) {
         if (e.data != MENSAJE_CONEXION_WEBSOCKET) {
             try {
                 processData(e.data);
@@ -46,7 +43,7 @@ $(function() {
                 console.log(err);
             }
         }
-    };
+    });
 });
 
 function processData(rawData) {
@@ -61,7 +58,7 @@ function processData(rawData) {
                 .replaceAll(']"', ']'));
             const rowData = normalizaRow(agent);
             const previousData = arrData[rowData.id];
-            if (rowData.id != null && ((previousData != null && previousData.tiempo < arrData.tiempo) || !previousData)) {
+            if (rowData.id != null && ((previousData != null && previousData.tiempo <= rowData.tiempo) || !previousData)) {
                 arrData[rowData.id] = rowData;
             }
         } catch(err) {

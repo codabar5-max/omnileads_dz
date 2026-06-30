@@ -73,7 +73,7 @@ class StorageService(object):
                 pass
         try:
             s3_file_path = file_name
-            if s3_file_path is not None:
+            if root_s3_folder is not None:
                 s3_file_path = f'{root_s3_folder}/{s3_file_path}'
             self.client.download_file(self.bucket_name, s3_file_path, file_dest)
         except Exception as e:
@@ -86,7 +86,7 @@ class StorageService(object):
         try:
             self.client.upload_file(local_path, self.bucket_name, file_dest)
         except Exception as e:
-            logger.error(f'Error descargando archivo desde S3 {e.__str__()}')
+            logger.error(f'Error subiendo archivo desde S3 {e.__str__()}')
             return False
         return True
 
@@ -95,6 +95,6 @@ class StorageService(object):
         try:
             self.client.delete_object(Bucket=self.bucket_name, Key=file_dest)
         except Exception as e:
-            logger.error(f'Error descargando archivo desde S3 {e.__str__()}')
+            logger.error(f'Error borrando archivo desde S3 {e.__str__()}')
             return False
         return True

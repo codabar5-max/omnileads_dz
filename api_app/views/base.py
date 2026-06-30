@@ -32,7 +32,7 @@ from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP
 from rest_framework.views import APIView
 
 from api_app.authentication import token_expire_handler, expires_in, ExpiringTokenAuthentication
-from api_app.serializers import UserSigninSerializer, UserSerializer
+from api_app.serializers.base import UserSigninSerializer, UserSerializer
 from api_app.views.permissions import TienePermisoOML
 from ominicontacto_app.forms import FormularioNuevoContacto
 from ominicontacto_app.models import SistemaExterno, Campana, BaseDatosContacto
@@ -121,7 +121,7 @@ class ContactoCreateView(APIView):
         # Valido los campos enviados
         metadata = campana.bd_contacto.get_metadata()
         extras = set(request.data.keys()) - set(metadata.nombres_de_columnas)
-        if len(extras) > 0:
+        if len(extras) > 0 and extras != {'confirmar_duplicado'}:
             return Response(data={
                 'status': 'ERROR',
                 'message': _('Se recibieron campos incorrectos'),
@@ -142,8 +142,12 @@ class ContactoCreateView(APIView):
         # Reemplazo campo 'id_externo'
         if metadata.nombre_campo_id_externo and metadata.nombre_campo_id_externo in request.data:
             request.data['id_externo'] = request.data.pop(metadata.nombre_campo_id_externo)
-
-        form = FormularioNuevoContacto(base_datos=campana.bd_contacto, data=request.data)
+        control_de_duplicados = campana.control_de_duplicados if campana else None
+        # Permito duplicar sin enviar confirmación por API
+        if control_de_duplicados == Campana.PERMITIR_DUPLICADOS:
+            request.data['confirmar_duplicado'] = True
+        form = FormularioNuevoContacto(base_datos=campana.bd_contacto, data=request.data,
+                                       control_de_duplicados=control_de_duplicados)
         if form.is_valid():
             # TODO: Decidir si esto lo tiene que hacer el form o la vista
             contacto = form.save(commit=False)

@@ -1,8 +1,32 @@
 import { createStore } from 'vuex';
-import AgentsCampaignService from '../services/agentsCampaignService.js';
-import PauseSetActions from './pause_sets/actions';
-import PauseSetMutations from './pause_sets/mutations';
-import PauseSetState from './pause_sets/state';
+import AgentsCampaignService from '../services/agents_campaign_service.js';
+import PauseSetActions from './pause_set/actions';
+import PauseSetMutations from './pause_set/mutations';
+import PauseSetState from './pause_set/state';
+import ExternalSiteActions from './external_site/actions';
+import ExternalSiteMutations from './external_site/mutations';
+import ExternalSiteState from './external_site/state';
+import ExternalSiteAuthenticationActions from './external_site_authentication/actions';
+import ExternalSiteAuthenticationMutations from './external_site_authentication/mutations';
+import ExternalSiteAuthenticationState from './external_site_authentication/state';
+import CallDispositionActions from './call_disposition/actions';
+import CallDispositionMutations from './call_disposition/mutations';
+import CallDispositionState from './call_disposition/state';
+import ExternalSystemActions from './external_system/actions';
+import ExternalSystemMutations from './external_system/mutations';
+import ExternalSystemState from './external_system/state';
+import FormActions from './form/actions';
+import FormMutations from './form/mutations';
+import FormState from './form/state';
+import PauseActions from './pause/actions';
+import PauseMutations from './pause/mutations';
+import PauseState from './pause/state';
+import InboundRouteActions from './inbound_routes/actions';
+import InboundRouteMutations from './inbound_routes/mutations';
+import InboundRouteState from './inbound_routes/state';
+import OutboundRouteActions from './outbound_routes/actions';
+import OutboundRouteMutations from './outbound_routes/mutations';
+import OutboundRouteState from './outbound_routes/state';
 const agentsCampaignService = new AgentsCampaignService();
 
 export default createStore({
@@ -11,7 +35,15 @@ export default createStore({
         active_agents: [],
         campaign: {},
         groups: [],
-        ...PauseSetState
+        ...PauseSetState,
+        ...ExternalSiteState,
+        ...ExternalSiteAuthenticationState,
+        ...CallDispositionState,
+        ...ExternalSystemState,
+        ...FormState,
+        ...PauseState,
+        ...InboundRouteState,
+        ...OutboundRouteState
     },
     mutations: {
         addAgentToCampaign (state, newAgent) {
@@ -37,7 +69,15 @@ export default createStore({
                 }
             });
         },
-        ...PauseSetMutations
+        ...PauseSetMutations,
+        ...ExternalSiteMutations,
+        ...ExternalSiteAuthenticationMutations,
+        ...CallDispositionMutations,
+        ...ExternalSystemMutations,
+        ...FormMutations,
+        ...PauseMutations,
+        ...InboundRouteMutations,
+        ...OutboundRouteMutations
     },
     actions: {
         addAgentToCampaign ({ commit }, newAgent) {
@@ -59,7 +99,15 @@ export default createStore({
         updateAgentPenalty ({ commit }, payload) {
             commit('updateAgentPenalty', payload);
         },
-        ...PauseSetActions
+        ...PauseSetActions,
+        ...ExternalSiteActions,
+        ...ExternalSiteAuthenticationActions,
+        ...CallDispositionActions,
+        ...ExternalSystemActions,
+        ...FormActions,
+        ...PauseActions,
+        ...InboundRouteActions,
+        ...OutboundRouteActions
     },
     modules: {
     },

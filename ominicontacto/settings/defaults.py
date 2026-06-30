@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'reportes_app.apps.ReportesAppConfig',
     'supervision_app.apps.SupervisionAppConfig',
     'notification_app.apps.NotificationAppConfig',
+    'notification_app.message.apps.Config',
     'simple_history',
     'widget_tweaks',
     'rest_framework',
@@ -78,7 +79,7 @@ INSTALLED_APPS = [
     'constance.backends.database',
     'django_sass',
     'django_sendfile',
-    'auditlog',
+    'easyaudit'
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -90,9 +91,9 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'auditlog.middleware.AuditlogMiddleware',
     'defender.middleware.FailedLoginMiddleware',
-    'ominicontacto_app.middleware.permiso_oml.PermisoOMLMiddleware'
+    'ominicontacto_app.middleware.permiso_oml.PermisoOMLMiddleware',
+    'easyaudit.middleware.easyaudit.EasyAuditMiddleware',
 ]
 
 
@@ -123,6 +124,16 @@ TEMPLATES = [
                 'ominicontacto_app.context_processors.addon_menu_items',
             ],
         },
+    },
+    {
+        "BACKEND": "django.template.backends.jinja2.Jinja2",
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "environment": "ominicontacto_app.template_backends_jinja2.environment",
+            "keep_trailing_newline": False,
+            "lstrip_blocks": True,
+            "trim_blocks": True,
+        }
     },
 ]
 
@@ -390,3 +401,21 @@ ALLOW_FEEDBACK = False
 
 CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
 
+DJANGO_EASY_AUDIT_REGISTERED_CLASSES = [
+    'ominicontacto_app.campana', 
+    'ominicontacto_app.queue', 
+    'ominicontacto_app.agenteprofile'
+]
+
+DJANGO_EASY_AUDIT_REGISTERED_URLS = [
+    r'^/reporte/llamadas/', 
+    r'^/reportes/agentes_tiempos/', 
+    r'^/auditar_gestion/buscar/(\d+)/',
+    r'^/campana/(\d+)/reporte_grafico/',
+    r'^/reporte_de_resultados/(\d+)/',
+    r'^/campana/(\d+)/reporte_calificacion/',
+    r'^/premium_reports/',
+    r'^/grabacion/buscar/(\d+)/',
+]
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

@@ -52,9 +52,6 @@ from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 from simple_history.utils import update_change_reason
 
-from auditlog.registry import auditlog
-from auditlog.models import AuditlogHistoryField
-
 from ominicontacto_app.utiles import (
     ValidadorDeNombreDeCampoExtra, fecha_local, datetime_hora_maxima_dia,
     datetime_hora_minima_dia, remplace_espacio_por_guion, dividir_lista)
@@ -358,7 +355,6 @@ class AgenteProfile(models.Model):
         (ESTADO_PAUSA, 'PAUSA'),
     )
 
-    history = AuditlogHistoryField()
     objects = AgenteProfileManager()
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     sip_extension = models.IntegerField(unique=True)
@@ -436,9 +432,6 @@ class AgenteProfile(models.Model):
         if self.grupo.limitar_agendas_personales_en_dias:
             return True, self.grupo.tiempo_maximo_para_agendar
         return False, 0
-
-
-auditlog.register(AgenteProfile)
 
 
 class SupervisorProfile(models.Model):
@@ -562,8 +555,16 @@ class Formulario(models.Model):
     descripcion = models.TextField()
     oculto = models.BooleanField(default=False)
 
-    def tiene_campana_asignada(self):
-        return self.campana_set.all().exists()
+    def se_puede_modificar(self):
+        return not self.opcioncalificacion_set.exists()
+
+    def ocultar(self):
+        self.oculto = True
+        self.save()
+
+    def desocultar(self):
+        self.oculto = False
+        self.save()
 
     def __str__(self):
         return self.nombre
@@ -1152,8 +1153,6 @@ class Campana(models.Model):
         (PERMITIR_DUPLICADOS, _('Permitir duplicados')),
     )
 
-    history = AuditlogHistoryField()
-
     estado = models.PositiveIntegerField(
         choices=ESTADOS,
         default=ESTADO_INACTIVA,
@@ -1505,9 +1504,6 @@ class Campana(models.Model):
         return self.type == self.TYPE_DIALER
 
 
-auditlog.register(Campana)
-
-
 class OpcionCalificacion(models.Model):
     """
     Especifica el tipo de formulario al cual será redireccionada
@@ -1709,9 +1705,6 @@ class Queue(models.Model):
 
     class Meta:
         db_table = 'queue_table'
-
-
-auditlog.register(Queue)
 
 
 class QueueMemberManager(models.Manager):
@@ -3144,6 +3137,28 @@ class ContactoBlacklist(models.Model):
         return "Telefono no llame {0}  ".format(self.telefono)
 
 
+class AutenticacionSitioExterno(models.Model):
+    """
+    Configuración para la autenticación a utilizar en las interacciones con un Sitio Externo
+    """
+    nombre = models.CharField(max_length=128, unique=True)
+    url = models.URLField(max_length=250)
+    username = models.CharField(max_length=128)
+    password = models.CharField(max_length=128)
+    campo_token = models.CharField(max_length=128, default='token')
+    duracion = models.PositiveIntegerField()  # Duracion en segundos. 0 Para
+    campo_duracion = models.CharField(max_length=128, blank=True)
+    ssl_estricto = models.BooleanField(default=True)
+    token = models.TextField(blank=True, null=True)
+    expiracion_token = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return "AutenticacionSitioExterno: {0}-{1}  ".format(self.id, self.nombre)
+
+    def tiene_sitios_externos(self):
+        return self.sitios_externos.all().count() > 0
+
+
 class SitioExterno(models.Model):
     """
     sitio externo para embeber en el agente
@@ -3188,16 +3203,20 @@ class SitioExterno(models.Model):
         (NUEVA_PESTANA, _('Nueva pestaña')),
     )
 
-    nombre = models.CharField(max_length=128)
-    url = models.CharField(max_length=256)
+    nombre = models.CharField(max_length=128, unique=True)
+    url = models.URLField(max_length=250)
     oculto = models.BooleanField(default=False)
-    disparador = models.PositiveIntegerField(choices=DISPARADORES, default=SERVER)
+    disparador = models.PositiveIntegerField(
+        choices=DISPARADORES, default=SERVER)
     metodo = models.PositiveIntegerField(choices=METODOS, default=GET)
     formato = models.PositiveIntegerField(choices=FORMATOS, default=MULTIPART,
                                           blank=True, null=True,
                                           verbose_name='Content-Type')
     objetivo = models.PositiveIntegerField(choices=OBJETIVOS, default=EMBEBIDO,
                                            blank=True, null=True)
+    autenticacion = models.ForeignKey(
+        AutenticacionSitioExterno, related_name='sitios_externos', blank=True, null=True,
+        on_delete=models.SET_NULL)
 
     def __str__(self):
         return "Sitio: {0} - url: {1}".format(self.nombre, self.url)
@@ -3264,8 +3283,12 @@ class SistemaExterno(models.Model):
 
 class AgenteEnSistemaExterno(models.Model):
     """Representa la relación entre un agente de OML y un sistema externo"""
-    agente = models.ForeignKey(AgenteProfile, on_delete=models.CASCADE)
-    sistema_externo = models.ForeignKey(SistemaExterno, on_delete=models.CASCADE)
+    agente = models.ForeignKey(
+        AgenteProfile, on_delete=models.CASCADE,
+        related_name='sistemas_externos')
+    sistema_externo = models.ForeignKey(
+        SistemaExterno, on_delete=models.CASCADE,
+        related_name='agentes_en_sistema')
     id_externo_agente = models.CharField(max_length=128)
 
     def __str__(self):
@@ -3489,10 +3512,14 @@ class AgenteEnContacto(models.Model):
         contacto_asignado = AgenteEnContacto.objects.filter(agente_id=agente.id,
                                                             estado=AgenteEnContacto.ESTADO_ASIGNADO,
                                                             campana_id=campana_id)
+        campana = Campana.objects.get(pk=campana_id)
+        campos_ocultos = campana.get_campos_ocultos()
         if contacto_asignado.exists():
             agente_en_contacto = contacto_asignado[0]
             data = model_to_dict(agente_en_contacto)
-            data['datos_contacto'] = literal_eval(data['datos_contacto'])
+            datos_contacto = literal_eval(data['datos_contacto'])
+            data['datos_contacto'] = \
+                {x: datos_contacto[x] for x in datos_contacto if x not in campos_ocultos}
             data['result'] = 'OK'
             data['code'] = 'contacto-asignado'
             return data
@@ -3537,7 +3564,9 @@ class AgenteEnContacto(models.Model):
             agente_en_contacto.agente_id = agente.id
             agente_en_contacto.save()
             data = model_to_dict(agente_en_contacto)
-            data['datos_contacto'] = literal_eval(data['datos_contacto'])
+            datos_contacto = literal_eval(data['datos_contacto'])
+            data['datos_contacto'] = \
+                {x: datos_contacto[x] for x in datos_contacto if x not in campos_ocultos}
             data['result'] = 'OK'
             data['code'] = 'contacto-entregado'
             return data
@@ -3631,6 +3660,8 @@ class ParametrosCrm(models.Model):
     OPCIONES_LLAMADA = (
         ('call_id', _('ID de Llamada')),
         ('agent_id', _('ID de Agente')),
+        ('agent_username', _('Username de Agente')),
+        ('agent_name', _('Nombre de Agente')),
         ('telefono', _('Teléfono')),
         ('id_contacto', _('ID de Cliente')),
         ('rec_filename', _('Archivo de Grabación')),
@@ -3689,6 +3720,10 @@ class ParametrosCrm(models.Model):
         LlamadaLog = apps.get_model('reportes_app.LlamadaLog')
         if self.valor == 'agent_id':
             return agente.id
+        if self.valor == 'agent_username':
+            return agente.user.username
+        if self.valor == 'agent_name':
+            return agente.user.get_full_name()
         elif self.valor == 'datetime':
             callid = datos_de_llamada['call_id']
             llamada_log = LlamadaLog.objects.filter(callid=callid).first()

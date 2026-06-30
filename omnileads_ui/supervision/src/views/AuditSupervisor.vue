@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <Toolbar class="p-mb-4">
+    <Toolbar class="mb-4">
       <template #start>
         <h1>{{ $t("views.audit.title") }}</h1>
       </template>
@@ -14,7 +14,7 @@
 </template>
 <script>
 import { reactive, toRefs, watch, ref } from 'vue';
-import apiUrls from '@/const/api-urls';
+import apiUrls from '@/const';
 import { apiCall, httpMethods } from '@/hooks/apiCall';
 import DataTableAuditSupervisor from '@/components/audit/DataTableAuditSupervisor';
 import FilterAuditSupervisor from '@/components/audit/FilterAuditSupervisor';

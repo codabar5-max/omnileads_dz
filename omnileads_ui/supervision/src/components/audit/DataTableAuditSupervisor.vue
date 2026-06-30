@@ -18,28 +18,29 @@
         totalRecords: '{totalRecords}',
       })
     "
-    dataKey="id"
     :filters="filters"
     filterDisplay="menu"
     :loading="loading"
     stripedRows
     responsiveLayout="scroll"
-    :globalFilterFields="['actor', 'object', 'name', 'action', 'date']"
+    :globalFilterFields="['username', 'object', 'name', 'action', 'date']"
   >
     <template #header>
-      <div class="p-d-flex p-jc-between">
-        <Button
-          icon="pi pi-external-link"
-          class="p-button-info"
-          :label="$t('globals.export_type', { type: 'CSV' })"
-          @click="exportCSV($event)"
-        />
-        <div>
+      <div class="flex justify-content-between flex-wrap">
+        <div class="flex align-items-center justify-content-center">
+          <Button
+            icon="pi pi-external-link"
+            class="p-button-info"
+            :label="$t('globals.export_type', { type: 'CSV' })"
+            @click="exportCSV($event)"
+          />
+        </div>
+        <div class="flex align-items-center justify-content-center">
           <Button
             type="button"
             icon="pi pi-filter-slash"
             :label="$t('globals.clean_filter')"
-            class="p-button-outlined p-mr-2"
+            class="p-button-outlined mr-2"
             @click="clearFilter()"
           />
           <span class="p-input-icon-left">
@@ -56,7 +57,7 @@
     <template #empty> {{ $t("globals.without_data") }} </template>
     <template #loading> {{ $t("globals.load_info") }} </template>
     <Column
-      field="actor"
+      field="username"
       :header="$tc('models.audit.user')"
       :sortable="true"
     ></Column>
@@ -75,7 +76,10 @@
       :header="$tc('models.audit.action')"
       :sortable="true"
     ></Column>
-    <Column field="changes" :header="$tc('models.audit.change')"></Column>
+    <Column
+      field="additional_information"
+      :header="$tc('models.audit.additional_information')"
+    ></Column>
     <Column
       field="date"
       :header="$tc('models.audit.datetime')"
@@ -95,7 +99,7 @@ export default {
     setup () {
         const filters = ref({
             global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-            actor: {
+            username: {
                 operator: FilterOperator.AND,
                 constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }]
             },
@@ -118,7 +122,7 @@ export default {
         const initFilters = () => {
             filters.value = {
                 global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-                actor: {
+                username: {
                     operator: FilterOperator.AND,
                     constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }]
                 },
